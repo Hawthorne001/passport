@@ -39,7 +39,7 @@
     "broadcast-channel": "^4.11.0",
     "did-session": "^3.0.2",
     "dids": "^5.0.2",
-    "ethers": "^6.3.0",
+    "ethers": "^6.13.1",
     "framer-motion": "^6.3.0",
     "jotai": "^2.5.0",
     "jotai-tanstack-query": "^0.7.2",
