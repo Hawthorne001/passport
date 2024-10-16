@@ -9,14 +9,14 @@ export class ETHPlatform extends Platform {
 
   banner = {
     heading: `
-      Click verify to process your Ethereum L1 transactions. Gitcoin uses a constantly
+      Click verify to process your Ethereum L1 transactions. Passport uses a constantly
       evolving model to review your transaction history and compare against known Sybil
       behavior. The number of points you'll receive is based on many factors related to
       the overall activity of the address.
     `,
     cta: {
-      label: "Find out more",
-      url: "https://support.gitcoin.co/gitcoin-knowledge-base/gitcoin-passport/navigating-your-ethereum-stamp-insights-and-updates",
+      label: "Learn more",
+      url: "https://support.passport.xyz/passport-knowledge-base/stamps/how-do-i-add-passport-stamps/verifying-ethereum-transactions-to-passport",
     },
   };
 

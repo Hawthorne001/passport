@@ -164,7 +164,6 @@ export type RequestPayload = {
   };
   jsonRpcSigner?: JsonRpcSigner;
   challenge?: string;
-  issuer?: string;
   signatureType?: SignatureType;
 };
 
@@ -227,7 +226,7 @@ export type ErrorResponseBody = {
   error?: string;
   code?: number;
 };
-export type CredentialResponseBody = ValidResponseBody & ErrorResponseBody;
+export type CredentialResponseBody = ValidResponseBody | ErrorResponseBody;
 
 // Issued Credential response
 export type IssuedChallenge = {
@@ -324,8 +323,8 @@ export type EasRequestBody = {
   nonce: number;
   recipient: string;
   credentials?: VerifiableCredential[];
-  dbAccessToken: string;
   chainIdHex: string;
+  customScorerId?: number;
 };
 
 // Passport DID
@@ -334,7 +333,6 @@ export type DID = string;
 export type PLATFORM_ID =
   | "Google"
   | "Ens"
-  | "Poh"
   | "Twitter"
   | "POAP"
   | "Facebook"
@@ -348,7 +346,6 @@ export type PLATFORM_ID =
   | "ETH"
   | "GtcStaking"
   | "NFT"
-  | "ZkSync"
   | "Lens"
   | "GnosisSafe"
   | "Coinbase"
@@ -358,15 +355,26 @@ export type PLATFORM_ID =
   | "Holonym"
   | "Idena"
   | "Civic"
-  | "CyberConnect"
   | "GrantsStack"
-  | "TrustaLabs";
+  | "ZkSync"
+  | "TrustaLabs"
+  | "Outdid"
+  | "AllowList"
+  | "Binance"
+  | "DeveloperList"
+  | `Custom#${string}`;
+
+export type PLATFORM_CATEGORY = {
+  name: string;
+  id?: string;
+  description: string;
+  platforms: PLATFORM_ID[];
+};
 
 export type PROVIDER_ID =
   | "Signer"
   | "Google"
   | "Ens"
-  | "Poh"
   | "POAP"
   | "Facebook"
   | "FacebookProfilePicture"
@@ -380,13 +388,6 @@ export type PROVIDER_ID =
   | "githubContributionActivityGte#30"
   | "githubContributionActivityGte#60"
   | "githubContributionActivityGte#120"
-  | "githubAccountCreationGte#90"
-  | "githubAccountCreationGte#180"
-  | "githubAccountCreationGte#365"
-  | "GitcoinContributorStatistics#numGrantsContributeToGte#1"
-  | "GitcoinContributorStatistics#numGrantsContributeToGte#10"
-  | "GitcoinContributorStatistics#numGrantsContributeToGte#25"
-  | "GitcoinContributorStatistics#numGrantsContributeToGte#100"
   | "GitcoinContributorStatistics#totalContributionAmountGte#10"
   | "GitcoinContributorStatistics#totalContributionAmountGte#100"
   | "GitcoinContributorStatistics#totalContributionAmountGte#1000"
@@ -396,7 +397,6 @@ export type PROVIDER_ID =
   | "Discord"
   | "Snapshot"
   | "SnapshotProposalsProvider"
-  | "SnapshotVotesProvider"
   | "ethPossessionsGte#1"
   | "ethPossessionsGte#10"
   | "ethPossessionsGte#32"
@@ -406,48 +406,27 @@ export type PROVIDER_ID =
   | "SelfStakingBronze"
   | "SelfStakingSilver"
   | "SelfStakingGold"
-  | "CommunityStakingBronze"
-  | "CommunityStakingSilver"
-  | "CommunityStakingGold"
   | "NFT"
-  | "ZkSync"
+  | "NFTScore#50"
+  | "NFTScore#75"
+  | "NFTScore#90"
   | "ZkSyncEra"
+  | "zkSyncScore#20"
+  | "zkSyncScore#50"
+  | "zkSyncScore#5"
   | "Lens"
   | "GnosisSafe"
   | "CoinbaseDualVerification"
-  | "GuildMember"
   | "GuildAdmin"
   | "GuildPassportMember"
   | "Hypercerts"
-  | "CyberProfilePremium"
-  | "CyberProfilePaid"
-  | "CyberProfileOrgMember"
-  | "PHIActivitySilver"
-  | "PHIActivityGold"
   | "HolonymGovIdProvider"
   | "IdenaState#Newbie"
   | "IdenaState#Verified"
   | "IdenaState#Human"
-  | "IdenaStake#1k"
-  | "IdenaStake#10k"
-  | "IdenaStake#100k"
-  | "IdenaAge#5"
-  | "IdenaAge#10"
   | "CivicCaptchaPass"
   | "CivicUniquenessPass"
   | "CivicLivenessPass"
-  | "Twitter"
-  | "TwitterTweetGT10"
-  | "TwitterFollowerGT100"
-  | "TwitterFollowerGT500"
-  | "TwitterFollowerGTE1000"
-  | "TwitterFollowerGT5000"
-  | "twitterAccountAgeGte#180"
-  | "twitterAccountAgeGte#365"
-  | "twitterAccountAgeGte#730"
-  | "twitterTweetDaysGte#30"
-  | "twitterTweetDaysGte#60"
-  | "twitterTweetDaysGte#120"
   | "GrantsStack3Projects"
   | "GrantsStack5Projects"
   | "GrantsStack7Projects"
@@ -458,10 +437,17 @@ export type PROVIDER_ID =
   | "BeginnerCommunityStaker"
   | "ExperiencedCommunityStaker"
   | "TrustedCitizen"
-  | "ETHAdvocate"
-  | "ETHPioneer"
-  | "ETHMaxi"
-  | "ETHEnthusiast";
+  | "ETHScore#50"
+  | "ETHScore#75"
+  | "ETHScore#90"
+  | "ETHDaysActive#50"
+  | "ETHGasSpent#0.25"
+  | "ETHnumTransactions#100"
+  | "Outdid"
+  | "AllowList"
+  | `AllowList#${string}`
+  | "BinanceBABT"
+  | `DeveloperList#${string}#${string}`;
 
 export type StampBit = {
   bit: number;

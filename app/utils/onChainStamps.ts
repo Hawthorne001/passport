@@ -1,4 +1,4 @@
-import { Contract, JsonRpcProvider, formatUnits } from "ethers";
+import { Contract, JsonRpcProvider, formatUnits, BigNumberish } from "ethers";
 import { JsonRpcProvider as V5JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber } from "@ethersproject/bignumber";
 import axios from "axios";
@@ -10,16 +10,22 @@ import { chains } from "./chains";
 import { datadogLogs } from "@datadog/browser-logs";
 import { datadogRum } from "@datadog/browser-rum";
 import { PROVIDER_ID, StampBit } from "@gitcoin/passport-types";
-import { DecodedProviderInfo } from "../context/onChainContext";
+import { DecodedProviderInfo } from "../hooks/useOnChainData";
 
 export type AttestationData = {
   passport: Attestation;
-  score: Attestation;
+  score: {
+    value: number;
+    expirationDate: Date;
+  };
 };
+
+const SCORE_MAX_AGE_MILLISECONDS = 1000 * 60 * 60 * 24 * 90; // 90 days
 
 export async function getAttestationData(
   address: string,
-  chainId: keyof typeof onchainInfo
+  chainId: keyof typeof onchainInfo,
+  customScorerId?: number
 ): Promise<AttestationData | undefined> {
   try {
     const activeChainRpc = chains.find((chain) => chain.id === chainId)?.rpcUrl;
@@ -35,10 +41,18 @@ export async function getAttestationData(
     const gitcoinResolverContract = new Contract(resolverAddress, resolverAbi, ethersProvider);
 
     const passportSchema = onchainInfo[chainId].easSchemas.passport.uid;
-    const scoreSchema = onchainInfo[chainId].easSchemas.score.uid;
 
     const passportUid = await gitcoinResolverContract.userAttestations(address, passportSchema);
-    const scoreUid = await gitcoinResolverContract.userAttestations(address, scoreSchema);
+    let cachedScore: {
+      score: BigNumberish;
+      time: BigNumberish;
+      expirationTime: BigNumberish;
+    };
+    if (customScorerId) {
+      cachedScore = await gitcoinResolverContract["getCachedScore(uint32,address)"](customScorerId, address);
+    } else {
+      cachedScore = await gitcoinResolverContract.getCachedScore(address);
+    }
 
     const eas = new EAS(onchainInfo[chainId].EAS.address);
 
@@ -46,11 +60,17 @@ export async function getAttestationData(
     const ethersV5Provider = new V5JsonRpcProvider(activeChainRpc);
     eas.connect(ethersV5Provider);
 
+    const score = {
+      value: parseFloat(formatUnits(cachedScore.score, 4)),
+      expirationDate: new Date(parseInt(cachedScore.time.toString()) * 1000 + SCORE_MAX_AGE_MILLISECONDS),
+    };
+
     return {
       passport: await eas.getAttestation(passportUid),
-      score: await eas.getAttestation(scoreUid),
+      score,
     };
   } catch (e: any) {
+    console.error("Failed to get attestation data", e);
     datadogLogs.logger.error("Failed to check onchain status", e);
     datadogRum.addError(e);
   }
@@ -107,20 +127,4 @@ export async function decodeProviderInformation(attestation: Attestation): Promi
     .filter((provider): provider is DecodedProviderInfo => provider !== undefined);
 
   return { onChainProviderInfo, hashes, issuanceDates, expirationDates };
-}
-
-export function decodeScoreAttestation(attestation: Attestation): number {
-  if (attestation.data === "0x") {
-    return NaN;
-  }
-
-  const schemaEncoder = new SchemaEncoder("uint256 score,uint32 scorer_id,uint8 score_decimals");
-  const decodedData = schemaEncoder.decodeData(attestation.data);
-
-  const score_as_integer = (decodedData.find(({ name }) => name === "score")?.value.value as BigNumber)._hex;
-  const score_decimals = decodedData.find(({ name }) => name === "score_decimals")?.value.value as number;
-
-  const score = parseFloat(formatUnits(score_as_integer, score_decimals));
-
-  return score;
 }

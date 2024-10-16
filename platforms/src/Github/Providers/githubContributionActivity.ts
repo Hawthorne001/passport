@@ -1,6 +1,11 @@
 import { ProviderExternalVerificationError, type Provider } from "../../types";
 import { RequestPayload, VerifiedPayload } from "@gitcoin/passport-types";
-import { fetchAndCheckContributions, GithubContext } from "./githubClient";
+import {
+  fetchAndCheckContributions,
+  getGithubUserData,
+  GithubContext,
+  requestAccessToken,
+} from "../../utils/githubClient";
 
 export type GithubContributionActivityOptions = {
   threshold: string;
@@ -20,35 +25,31 @@ export class GithubContributionActivityProvider implements Provider {
   }
 
   async verify(payload: RequestPayload, context: GithubContext): Promise<VerifiedPayload> {
-    try {
-      const errors: string[] = [];
-      let record = undefined,
-        valid = false,
-        contributionResult;
+    const thresholdDays = parseInt(this._options.threshold);
 
-      try {
-        contributionResult = await fetchAndCheckContributions(context, payload.proofs.code, this._options.threshold);
-      } catch (e) {
-        valid = false;
-        errors.push(String(e));
-      }
+    // Calling requestAccessToken will store the token in the ocntext
+    await requestAccessToken(payload.proofs.code, context);
 
-      valid = contributionResult.contributionValid;
-      const githubId = context.github.id;
+    const { contributionDays, userId, hadBadCommits } = await fetchAndCheckContributions(context);
 
-      if (valid) {
-        record = { id: githubId };
-      } else {
-        errors.push("Your Github contributions did not qualify for this stamp.");
-      }
+    const valid = contributionDays >= thresholdDays;
 
-      return {
-        valid,
-        errors,
-        record,
-      };
-    } catch (error: unknown) {
-      throw new ProviderExternalVerificationError(`Error verifying Github contributions: ${JSON.stringify(error)}`);
-    }
+    const errors = valid
+      ? undefined
+      : [
+          `You have contributed on ${contributionDays} days, the minimum for this stamp is ${thresholdDays} days.${
+            hadBadCommits
+              ? " Some commits were ignored because they ocurred before the Github repo or user creation."
+              : ""
+          }`,
+        ];
+
+    return {
+      valid,
+      errors,
+      record: {
+        id: userId,
+      },
+    };
   }
 }

@@ -4,45 +4,64 @@ import { Chain } from "../utils/chains";
 import { useOnChainStatus } from "../hooks/useOnChainStatus";
 import { OnChainStatus } from "../utils/onChainStatus";
 import { useWalletStore } from "../context/walletStore";
+import { useOnChainData } from "../hooks/useOnChainData";
+import { Spinner } from "@chakra-ui/react";
+import { Hyperlink } from "@gitcoin/passport-platforms";
+
+const formatDate = (date: Date): string =>
+  Intl.DateTimeFormat("en-US", { month: "short", day: "2-digit", year: "numeric" }).format(date);
 
 export function NetworkCard({ chain }: { chain: Chain }) {
-  const onChainStatus = useOnChainStatus({ chain });
+  const { status, isPending } = useOnChainStatus({ chain });
+  const { expirationDate } = useOnChainData().data[chain.id] || {};
   const address = useWalletStore((state) => state.address);
 
-  const isOnChain =
-    onChainStatus === OnChainStatus.MOVED_OUT_OF_DATE || onChainStatus === OnChainStatus.MOVED_UP_TO_DATE;
+  const isOnChain = [
+    OnChainStatus.MOVED_OUT_OF_DATE,
+    OnChainStatus.MOVED_UP_TO_DATE,
+    OnChainStatus.MOVED_EXPIRED,
+  ].includes(status);
+
+  const expired = status === OnChainStatus.MOVED_EXPIRED;
+
   return (
     <div
       className={`${
-        chain?.attestationProvider?.status === "enabled" &&
-        "bg-background-4 bg-gradient-to-b from-background to-[#06153D]"
-      } mb-6 rounded border border-foreground-6  p-2 align-middle text-color-2`}
+        chain?.attestationProvider?.status === "enabled" && "bg-gradient-to-b from-background"
+      } ${expired ? "to-focus/25 border-focus text-focus" : "to-background-2/50 border-foreground-1 text-color-1"}
+      mb-6 rounded-lg border p-2 align-middle`}
     >
       <div className="mx-4 my-2">
-        <div className={`${isOnChain ? "grid-rows-2" : "grid-rows-1"} grid grid-flow-col  gap-4 space-y-2`}>
-          <div className="flex items-center">
-            <img className="h-10" src={chain.icon} alt={`${chain.label} logo`} />
-            <h1 className="ml-3 text-xl">{chain.label}</h1>
-          </div>
-          {isOnChain && (
-            <>
-              {address && (
-                <a
-                  href={chain.attestationProvider?.viewerUrl(address)}
-                  className="pt-2 text-sm text-foreground-2 underline"
-                >
-                  Check attestation on EAS
-                </a>
-              )}
-              <h2 className="my-3 pt-2 text-right text-base text-color-1">Moved</h2>
-            </>
-          )}
-          <SyncToChainButton
-            className="inline-block rounded border border-foreground-2"
-            onChainStatus={onChainStatus}
-            chain={chain}
-          />
+        <div className="flex items-center">
+          <img className="h-10" src={chain.attestationProvider?.monochromeIcon} alt={`${chain.label} logo`} />
+          <h1 className="ml-3 grow text-base font-heading">{chain.label}</h1>
+          <SyncToChainButton onChainStatus={status} chain={chain} isLoading={isPending} />
         </div>
+        {isOnChain && (
+          <div className="flex flex-row-reverse text-sm items-center mt-2">
+            <div className={`text-right grow ${expired ? "text-inherit" : "text-color-6"} leading-tight`}>
+              {expired ? (
+                "Expired"
+              ) : expirationDate ? (
+                <>
+                  Expires
+                  <br />
+                  {formatDate(expirationDate)}
+                </>
+              ) : (
+                <Spinner size="sm" />
+              )}
+            </div>
+            {address && chain.attestationProvider?.hasWebViewer && (
+              <Hyperlink
+                href={chain.attestationProvider?.viewerUrl(address) || ""}
+                className={`font-alt leading-none w-[45%] ${expired ? "text-inherit" : ""}`}
+              >
+                {chain.attestationProvider?.attestationExplorerLinkText}
+              </Hyperlink>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,22 +1,18 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // --- React Methods
-import React, { useContext, useState, useRef, useEffect } from "react";
+import React, { useContext, useState } from "react";
 
 // --- Style Components
 import { Button } from "./Button";
-import { CeramicContext, platforms } from "../context/ceramicContext";
-import { Modal, ModalContent, ModalOverlay, useToast } from "@chakra-ui/react";
-import { DoneToastContent } from "./DoneToastContent";
-import { STAMP_PROVIDERS } from "../config/providers";
-import { PLATFORM_ID, PROVIDER_ID } from "@gitcoin/passport-types";
+import { CeramicContext } from "../context/ceramicContext";
+import { Modal, ModalContent, ModalOverlay } from "@chakra-ui/react";
+import { PLATFORM_ID } from "@gitcoin/passport-types";
 import { LoadButton } from "./LoadButton";
-import { getPlatformSpec } from "../config/platforms";
+import { usePlatforms } from "../hooks/usePlatforms";
 // -- Utils
 import { StampClaimForPlatform, StampClaimingContext } from "../context/stampClaimingContext";
-
-export const getProviderIdsFromPlatformId = (platformId: PLATFORM_ID): PROVIDER_ID[] => {
-  return STAMP_PROVIDERS[platformId as PLATFORM_ID].flatMap((x) => x.providers.map((y) => y.name));
-};
+import { Hyperlink } from "@gitcoin/passport-platforms";
+import { useMessage } from "../hooks/useMessage";
 
 export type ExpiredStampModalProps = {
   isOpen: boolean;
@@ -31,48 +27,45 @@ export const ReverifyStampsModal = ({ isOpen, onClose }: ExpiredStampModalProps)
   const { expiredProviders } = useContext(CeramicContext);
   const { claimCredentials, status } = useContext(StampClaimingContext);
   const [waitForNext, setWaitForNext] = useState<WaitCondition>();
-  // const [initialStepCompleted, setInitialStepCompleted] = useState(false);
-  const [currentStepInProgress, setCurrentStepInProgress] = useState(true);
   const [isReverifyingStamps, setIsReverifyingStamps] = useState(false);
+  const { getPlatformSpec, platformProviderIds, platforms } = usePlatforms();
 
-  const toast = useToast();
+  const { success, failure } = useMessage();
 
   const successToast = () => {
-    toast({
-      duration: 9000,
-      isClosable: true,
-      render: (result: any) => (
-        <DoneToastContent
-          title="Success"
-          message="Your expired stamps have been reverified."
-          icon="./assets/check-icon2.svg"
-          result={result}
-        />
-      ),
+    success({
+      title: "Success",
+      message: "Your expired stamps have been reverified.",
     });
   };
 
-  const expiredPlatforms = Object.keys(STAMP_PROVIDERS).filter((provider) => {
-    const possibleProviders = getProviderIdsFromPlatformId(provider as PLATFORM_ID);
+  const errorToast = (platform: string) => {
+    failure({
+      title: "Error",
+      message: `Failed to reverify stamps for ${platform}. Please double check eligibility and try again.`,
+    });
+  };
+
+  const expiredPlatforms = Array.from(platforms.keys()).filter((platform) => {
+    const possibleProviders = platformProviderIds[platform];
     return possibleProviders.filter((provider) => expiredProviders.includes(provider)).length > 0;
   });
 
-  const handleClaimStep = async (step: number, platformId?: PLATFORM_ID | "EVMBulkVerify"): Promise<void> => {
-    if (status === "in_progress") {
-      setCurrentStepInProgress(true);
-    } else {
+  const handleClaimStep = async (step: number): Promise<void> => {
+    if (status !== "in_progress") {
       if (step == 0) {
         // We do not wait on the first step, the user has to click next only
         // before getting to the next one
         return;
       }
 
-      setCurrentStepInProgress(false);
       return new Promise<void>((resolve) => {
         setWaitForNext({ doContinue: resolve });
       });
     }
   };
+
+  const indicateError = (platform: PLATFORM_ID | "EVMBulkVerify") => errorToast(platform);
 
   const reverifyStamps = async () => {
     setIsReverifyingStamps(true);
@@ -83,9 +76,8 @@ export const ReverifyStampsModal = ({ isOpen, onClose }: ExpiredStampModalProps)
       selectedProviders: [],
     };
 
-    Object.keys(STAMP_PROVIDERS).forEach((_platformId) => {
-      const platformId = _platformId as PLATFORM_ID;
-      const possibleProviders = getProviderIdsFromPlatformId(platformId);
+    Array.from(platforms.keys()).forEach((platformId) => {
+      const possibleProviders = platformProviderIds[platformId];
       const expiredProvidersInPlatform = possibleProviders.filter((provider) => expiredProviders.includes(provider));
 
       const platform = platforms.get(platformId)?.platform;
@@ -99,7 +91,7 @@ export const ReverifyStampsModal = ({ isOpen, onClose }: ExpiredStampModalProps)
       }
     });
 
-    await claimCredentials(handleClaimStep, [evmStampClaim, ...stampClaims]);
+    await claimCredentials(handleClaimStep, indicateError, [evmStampClaim, ...stampClaims]);
 
     setIsReverifyingStamps(false);
     onClose();
@@ -122,14 +114,12 @@ export const ReverifyStampsModal = ({ isOpen, onClose }: ExpiredStampModalProps)
           </div>
           <p className="m-1 text-sm font-bold">Refresh Expired Stamps</p>
           <p className="m-1 mb-4 text-center">These expired stamps will be refreshed in your Passport.</p>
-          <a
-            className="mb-1 text-center text-sm text-blue-600 underline"
+          <Hyperlink
+            className="mb-1 text-sm"
             href="https://support.gitcoin.co/gitcoin-knowledge-base/gitcoin-passport/common-questions/why-have-my-stamps-expired"
-            target="_blank"
-            rel="noopener noreferrer"
           >
             Why have my stamps expired?
-          </a>
+          </Hyperlink>
           <p className="w-full text-left text-sm font-semibold text-gray-600">Stamps</p>
           <hr className="border-1 w-full" />
           {expiredPlatforms.map((platform) => {

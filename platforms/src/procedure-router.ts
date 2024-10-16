@@ -5,6 +5,7 @@ import * as twitterOAuth from "./Twitter/procedures/twitterOauth";
 import { triggerBrightidSponsorship, verifyBrightidContextId } from "./Brightid/procedures/brightid";
 import path from "path";
 import * as idenaSignIn from "./Idena/procedures/idenaSignIn";
+import { outdidRequestVerification } from "./Outdid/procedures/outdidVerification";
 
 export const router = Router();
 
@@ -60,10 +61,24 @@ router.post("/brightid/verifyContextId", (req: Request, res: Response): void => 
 });
 
 router.get("/brightid/information", (req: Request, res: Response): void => {
+  const callback = ((req.query.callback as string) || "").replace(/\/$/, "");
+  const allowed_callback = process.env.GENERIC_CALLBACK_URL.replace(/\/$/, "");
+
+  if (callback !== allowed_callback) {
+    res.status(400).send("Invalid callback");
+    return;
+  }
+
   const staticPath =
     process.env.CURRENT_ENV === "development"
       ? "src/static/bright-id-template.html"
       : "iam/src/static/bright-id-template.html";
+  res.sendFile(path.resolve(process.cwd(), staticPath));
+});
+
+router.get("/brightid/script.js", (req: Request, res: Response): void => {
+  const staticPath =
+    process.env.CURRENT_ENV === "development" ? "src/static/bright-id-script.js" : "iam/src/static/bright-id-script.js";
   res.sendFile(path.resolve(process.cwd(), staticPath));
 });
 
@@ -149,3 +164,19 @@ router.post("/idena/authenticate", (req: Request, res: Response): void => {
       }
     });
 });
+
+router.post("/outdid/connect", (req: Request, res: Response): void => {
+  const body = req.body as { userDid?: string; callback?: string };
+  if (body && body.userDid && body.callback) {
+    outdidRequestVerification(body.userDid, body.callback)
+      .then((response) => {
+        res.status(200).send(response);
+      })
+      .catch((_) => {
+        res.status(400).send();
+      });
+  } else {
+    res.status(400).send();
+  }
+});
+
