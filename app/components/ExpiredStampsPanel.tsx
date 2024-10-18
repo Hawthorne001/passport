@@ -1,10 +1,9 @@
 import { PlatformSpec } from "@gitcoin/passport-platforms";
-import { PLATFORM_ID } from "@gitcoin/passport-types";
-import React, { useCallback, useContext, useMemo } from "react";
-import { getPlatformSpec } from "../config/platforms";
+import React, { useContext } from "react";
+import { usePlatforms } from "../hooks/usePlatforms";
 import { CeramicContext } from "../context/ceramicContext";
-import { OnChainContext } from "../context/onChainContext";
 import InitiateReverifyStampsButton from "./InitiateReverifyStampsButton";
+import { PLATFORM_ID } from "@gitcoin/passport-types";
 
 type StampsListProps = {
   className?: string;
@@ -12,13 +11,14 @@ type StampsListProps = {
 
 const ExpiredStampsList = ({ className }: StampsListProps) => {
   const { expiredPlatforms } = useContext(CeramicContext);
+  const { getPlatformSpec } = usePlatforms();
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
       <div className={`flex flex-wrap justify-center gap-8`}>
         {expiredPlatforms
-          ? Object.values(expiredPlatforms)
-              .map((platform) => getPlatformSpec(platform.platform.platformId))
+          ? Object.keys(expiredPlatforms)
+              .map((platformId) => getPlatformSpec(platformId as PLATFORM_ID))
               .filter((platformSpec): platformSpec is PlatformSpec => !!platformSpec)
               .map((platformSpec) => {
                 // check if platform has onchain providers
@@ -48,7 +48,7 @@ export const ExpiredStampsPanel = ({ className }: { className: string }) => {
       {expiredProviders.length > 0 ? (
         <InitiateReverifyStampsButton className="mb-10" />
       ) : (
-        <p className="mb-10">You don&apos;t have any expired stamps</p>
+        <p className="mb-10">You don&apos;t have any expired Stamps</p>
       )}
     </div>
   );

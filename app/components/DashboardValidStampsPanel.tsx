@@ -1,10 +1,10 @@
 import { PlatformSpec } from "@gitcoin/passport-platforms";
 import { PLATFORM_ID } from "@gitcoin/passport-types";
 import React, { useCallback, useContext, useMemo } from "react";
-import { getPlatformSpec } from "../config/platforms";
+import { usePlatforms } from "../hooks/usePlatforms";
 import { CeramicContext } from "../context/ceramicContext";
-import { OnChainContext } from "../context/onChainContext";
 import InitiateOnChainButton from "./InitiateOnChainButton";
+import { useOnChainData } from "../hooks/useOnChainData";
 
 type StampsListProps = {
   onChainPlatformIds: PLATFORM_ID[];
@@ -17,12 +17,13 @@ const OnchainMarker = ({ className }: { className?: string }) => (
 
 const StampsList = ({ className, onChainPlatformIds }: StampsListProps) => {
   const { verifiedPlatforms } = useContext(CeramicContext);
+  const { getPlatformSpec } = usePlatforms();
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
       <div className={`flex flex-wrap justify-center gap-8`}>
-        {Object.values(verifiedPlatforms)
-          .map((platform) => getPlatformSpec(platform.platform.platformId))
+        {Object.keys(verifiedPlatforms)
+          .map((platformId) => getPlatformSpec(platformId as PLATFORM_ID))
           .filter((platformSpec): platformSpec is PlatformSpec => !!platformSpec)
           .map((platformSpec) => {
             // check if platform has onchain providers
@@ -42,7 +43,7 @@ const StampsList = ({ className, onChainPlatformIds }: StampsListProps) => {
 
 export const DashboardValidStampsPanel = ({ className }: { className: string }) => {
   const { verifiedPlatforms, allProvidersState } = useContext(CeramicContext);
-  const { activeChainProviders } = useContext(OnChainContext);
+  const { activeChainProviders } = useOnChainData();
 
   const hasOnchainProviders = useCallback(
     (platformId: PLATFORM_ID) => {

@@ -1,17 +1,21 @@
 import * as githubContributionActivity from "../githubContributionActivity";
 
 import { RequestPayload, VerifiedPayload, ProviderContext } from "@gitcoin/passport-types";
-import { fetchAndCheckContributions } from "../githubClient";
+import { fetchAndCheckContributions, requestAccessToken } from "../../../utils/githubClient";
 
 const { GithubContributionActivityProvider } = githubContributionActivity;
 
-jest.mock("../githubClient", () => ({
+jest.mock("../../../utils/githubClient", () => ({
   fetchAndCheckContributions: jest.fn(),
+  requestAccessToken: jest.fn(),
 }));
 
 describe("GithubContributionActivityProvider", function () {
   beforeEach(() => {
     jest.clearAllMocks();
+    (requestAccessToken as jest.MockedFunction<typeof requestAccessToken>).mockImplementation(() => {
+      return Promise.resolve("access-token");
+    });
   });
   const mockContext: ProviderContext = {
     github: {
@@ -30,7 +34,9 @@ describe("GithubContributionActivityProvider", function () {
   it("handles valid verification attempt", async () => {
     (fetchAndCheckContributions as jest.MockedFunction<typeof fetchAndCheckContributions>).mockImplementation(() => {
       return Promise.resolve({
-        contributionValid: true,
+        userId: "123",
+        contributionDays: 30,
+        hadBadCommits: false,
         errors: [],
       });
     });
@@ -41,7 +47,7 @@ describe("GithubContributionActivityProvider", function () {
     expect(fetchAndCheckContributions).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       valid: true,
-      errors: [],
+      errors: undefined,
       record: { id: "123" },
     });
   });
@@ -49,27 +55,29 @@ describe("GithubContributionActivityProvider", function () {
   it("handles error during verification", async () => {
     (fetchAndCheckContributions as jest.MockedFunction<typeof fetchAndCheckContributions>).mockImplementation(() => {
       return Promise.resolve({
-        contributionValid: false,
-        errors: ["Some error"],
+        userId: "123",
+        contributionDays: 30,
+        hadBadCommits: false,
       });
     });
 
-    const provider = new GithubContributionActivityProvider({ threshold: "1" });
+    const provider = new GithubContributionActivityProvider({ threshold: "31" });
     const result: VerifiedPayload = await provider.verify(mockPayload, mockContext);
 
     expect(fetchAndCheckContributions).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       valid: false,
-      errors: ["Your Github contributions did not qualify for this stamp."],
-      record: undefined,
+      errors: ["You have contributed on 30 days, the minimum for this stamp is 31 days."],
+      record: { id: "123" },
     });
   });
 
   it("handles invalid contributions", async () => {
     (fetchAndCheckContributions as jest.MockedFunction<typeof fetchAndCheckContributions>).mockImplementation(() => {
       return Promise.resolve({
-        contributionValid: false,
-        errors: ["Your Github contributions did not qualify for this stamp."],
+        userId: "123",
+        contributionDays: 0,
+        hadBadCommits: true,
       });
     });
 
@@ -79,8 +87,10 @@ describe("GithubContributionActivityProvider", function () {
     expect(fetchAndCheckContributions).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       valid: false,
-      errors: ["Your Github contributions did not qualify for this stamp."],
-      record: undefined,
+      errors: [
+        "You have contributed on 0 days, the minimum for this stamp is 1 days. Some commits were ignored because they ocurred before the Github repo or user creation.",
+      ],
+      record: { id: "123" },
     });
   });
 });

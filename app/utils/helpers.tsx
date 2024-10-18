@@ -1,10 +1,14 @@
 // import React from "react";
 
 // --- Types
-import { PLATFORM_ID } from "@gitcoin/passport-types";
-import { CredentialResponseBody, PROVIDER_ID, VerifiableCredential } from "@gitcoin/passport-types";
+import {
+  PLATFORM_ID,
+  ValidResponseBody,
+  CredentialResponseBody,
+  PROVIDER_ID,
+  VerifiableCredential,
+} from "@gitcoin/passport-types";
 import axios, { AxiosResponse } from "axios";
-import { ProviderSpec, STAMP_PROVIDERS } from "../config/providers";
 import { datadogRum } from "@datadog/browser-rum";
 import { Cacao } from "@didtools/cacao";
 import { DID } from "dids";
@@ -16,6 +20,10 @@ export function difference(setA: Set<PROVIDER_ID>, setB: Set<PROVIDER_ID>) {
     _difference.delete(elem);
   });
   return _difference;
+}
+
+export function intersect<T>(setA: Set<T>, setB: Set<T>): Set<T> {
+  return new Set([...setA].filter((item) => setB.has(item)));
 }
 
 export function generateUID(length: number) {
@@ -32,18 +40,28 @@ export function generateUID(length: number) {
 export function reduceStampResponse(providerIDs: PROVIDER_ID[], verifiedCredentials?: CredentialResponseBody[]) {
   if (!verifiedCredentials) return [];
   return verifiedCredentials
-    .filter(
-      (credential) =>
-        !credential.error && providerIDs.find((providerId: PROVIDER_ID) => credential?.record?.type === providerId)
-    )
+    .filter((credential): credential is ValidResponseBody => !("error" in credential && credential.error))
+    .filter((credential) => providerIDs.find((providerId: PROVIDER_ID) => credential?.record?.type === providerId))
     .map((credential) => ({
       provider: credential.record?.type as PROVIDER_ID,
       credential: credential.credential as VerifiableCredential,
     }));
 }
 
-export function checkShowOnboard(): boolean {
+// This is pulled out to support testing
+// Use `checkShowOnboard` instead
+export function _checkShowOnboard(currentOnboardResetIndex: string) {
+  const savedOnboardResetIndex = localStorage.getItem("onboardResetIndex");
+
+  localStorage.setItem("onboardResetIndex", currentOnboardResetIndex || "");
+
+  if (currentOnboardResetIndex && currentOnboardResetIndex !== savedOnboardResetIndex) {
+    localStorage.removeItem("onboardTS");
+    return true;
+  }
+
   const onboardTs = localStorage.getItem("onboardTS");
+
   if (!onboardTs) return true;
   // Get the current Unix timestamp in seconds.
   const currentTimestamp = Math.floor(Date.now() / 1000);
@@ -61,6 +79,11 @@ export function checkShowOnboard(): boolean {
   }
 
   return onBoardOlderThanThreeMonths;
+}
+
+export function checkShowOnboard(): boolean {
+  const currentOnboardResetIndex = process.env.NEXT_PUBLIC_ONBOARD_RESET_INDEX || "";
+  return _checkShowOnboard(currentOnboardResetIndex);
 }
 
 /**
@@ -90,19 +113,6 @@ export const graphql_fetch = async (endpoint: URL, query: string, variables: obj
       throw new Error(`Request error: ${error.message}`);
     }
   }
-};
-
-/**
- * Retrieves the provider specification for a given platform and provider name.
- *
- * @param platform The platform ID.
- * @param provider The provider name.
- * @returns The provider specification if found, or undefined otherwise.
- */
-export const getProviderSpec = (platform: PLATFORM_ID, provider: string): ProviderSpec => {
-  return STAMP_PROVIDERS[platform]
-    ?.find((i) => i.providers.find((p) => p.name == provider))
-    ?.providers.find((p) => p.name == provider) as ProviderSpec;
 };
 
 /**

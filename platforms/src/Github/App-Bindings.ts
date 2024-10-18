@@ -1,22 +1,22 @@
+import React from "react";
 import { PlatformOptions } from "../types";
 import { Platform } from "../utils/platform";
+
 export class GithubPlatform extends Platform {
   platformId = "Github";
   path = "github";
   clientId: string = null;
   redirectUri: string = null;
 
+  banner = {
+    content:
+      "Contribution Activity credentials focus on commit days. Ensure your contribution history is public by going to Settings > Public Profile > Contributions & Activity and unchecking 'Make profile private and hide activity'.",
+  };
+
   constructor(options: PlatformOptions = {}) {
     super();
     this.clientId = options.clientId as string;
     this.redirectUri = options.redirectUri as string;
-    if (process.env.NEXT_PUBLIC_FF_NEW_GITHUB_STAMPS === "on") {
-      this.banner = {
-        heading: "Verifying Contribution Activity",
-        content:
-          "For the Contribution Activity credentials, make sure your contribution data is public. Go to Settings > Public Profile > Contributions & Activity and uncheck 'Make profile private and hide activity'. Verify your contribution history with your Gitcoin Passport!",
-      };
-    }
   }
 
   async getOAuthUrl(state: string): Promise<string> {
