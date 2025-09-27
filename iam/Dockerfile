@@ -1,4 +1,4 @@
-FROM node:22.14.0 AS build
+FROM node:22.20.0 AS build
 WORKDIR /app
 
 COPY . .
@@ -9,7 +9,7 @@ RUN yarn --mode=production --frozen-lockfile install --ignore-scripts \
 && yarn build:iam
 
 
-FROM node:22.14.0
+FROM node:22.20.0
 WORKDIR /app
 
 COPY --from=build /app/node_modules ./node_modules
