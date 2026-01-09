@@ -56,13 +56,13 @@
     "react-google-login": "^5.2.2",
     "react-gtm-module": "^2.0.11",
     "react-responsive": "^10.0.0",
-    "react-router-dom": "^6.22.3",
+    "react-router-dom": "^7.0.0",
     "tailwind-gradient-mask-image": "^1.1.0",
     "tailwind-merge": "^2.5.2",
     "ts-debounce": "^4.0.0",
     "ts-node": "^10.8.0",
     "viem": "^2.21.41",
-    "wagmi": "^2.12.26",
+    "wagmi": "^3.0.0",
     "zustand": "^4.4.5"
   },
   "devDependencies": {
