@@ -22,7 +22,7 @@
     "@gitcoin/passport-types": "^1.0.0",
     "@holonym-foundation/mishtiwasm": "github:https://github.com/passportxyz/mishtiwasm-pkg#v2",
     "@ipld/dag-cbor": "^9.2.2",
-    "axios": "^1.7.9",
+    "axios": "^1.13.5",
     "dids": "^5.0.3",
     "multiformats": "^13.1.0"
   },
