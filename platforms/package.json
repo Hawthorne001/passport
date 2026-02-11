@@ -38,7 +38,7 @@
     "@zk-email/sdk": "2.0.11",
     "axios": "^1.7.9",
     "bignumber.js": "^9.1.2",
-    "ethers": "^6.13.4",
+    "ethers": "^6.0.0",
     "ethers-v5": "npm:ethers@5.7.2",
     "multiformats": "^13.0.0",
     "redis": "^4.6.10"
